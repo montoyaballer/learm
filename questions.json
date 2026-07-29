@@ -3,6 +3,8 @@
   "questions": [
     {
       "id": "public-demo-1",
+      "category": "示例分类",
+      "set": "基础知识示例卷",
       "question": "中国的首都是哪里？",
       "options": ["上海", "北京", "广州", "深圳"],
       "answer": "B",
@@ -10,6 +12,8 @@
     },
     {
       "id": "public-demo-2",
+      "category": "示例分类",
+      "set": "网络知识示例卷",
       "question": "HTTP 状态码 404 表示什么？",
       "options": [],
       "answer": "请求的资源未找到",
@@ -17,6 +21,8 @@
     },
     {
       "id": "public-demo-3",
+      "category": "示例分类",
+      "set": "网络知识示例卷",
       "question": "下列哪些属于前端基础技术？（多选）",
       "options": ["HTML", "CSS", "JavaScript", "SQL"],
       "answer": "ABC",

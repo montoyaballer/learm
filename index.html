@@ -95,11 +95,37 @@
     }
     .mode b { display: block; margin-bottom: 5px; font-size: 16px; }
     .mode span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .config-row { margin-top: 16px; }
+    .config-row > label { margin-bottom: 9px; }
+    .selection-tools { display: flex; gap: 8px; margin-bottom: 12px; }
+    .mini-button {
+      min-height: 38px; padding: 0 12px; color: var(--green); background: white;
+      border: 1px solid var(--line); border-radius: 6px; font-size: 13px; font-weight: 700;
+    }
+    .category-group + .category-group { margin-top: 16px; }
+    .category-title { margin-bottom: 7px; color: var(--muted); font-size: 13px; font-weight: 750; }
+    .set-selector { max-height: 310px; overflow-y: auto; padding-right: 2px; }
+    .set-choice {
+      min-height: 50px; display: grid; grid-template-columns: 24px 1fr auto; gap: 9px;
+      align-items: center; margin-bottom: 7px; padding: 9px 11px; background: #f8faf8;
+      border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+    }
+    .set-choice input, .toggle-line input { width: 19px; height: 19px; accent-color: var(--green); }
+    .set-choice:has(input:checked) { border-color: #86b895; background: #f2f9f4; }
+    .set-choice b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .set-choice span { color: var(--muted); font-size: 12px; }
+    .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .toggle-line {
+      min-height: 48px; display: flex; align-items: center; gap: 9px; padding: 0 11px;
+      background: #f8faf8; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; font-weight: 650;
+    }
 
     .quiz-head { margin-bottom: 14px; }
     .quiz-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; color: var(--muted); font-size: 13px; }
     .tag { padding: 3px 8px; color: var(--green); background: var(--green-soft); border-radius: 4px; }
     .question-card { padding: 20px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+    .question-context { margin-bottom: 8px; color: var(--muted); font-size: 12px; }
     .question-title { margin: 0 0 20px; font-size: 19px; line-height: 1.65; white-space: pre-wrap; }
     .options { display: grid; gap: 10px; }
     .option {
@@ -138,7 +164,15 @@
     textarea { min-height: 240px; padding: 12px; line-height: 1.55; resize: vertical; }
     input:focus, textarea:focus, select:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px rgba(21,128,61,.12); }
     .hint { margin: 8px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.6; }
-    .search-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; margin-bottom: 14px; }
+    .filter-grid { display: grid; grid-template-columns: 1fr 1fr 120px; gap: 8px; margin-bottom: 14px; }
+    .filter-grid .search-field { grid-column: 1 / -1; }
+    .group-list { display: grid; gap: 8px; }
+    .group-item {
+      min-height: 55px; display: grid; grid-template-columns: 1fr auto; gap: 10px;
+      align-items: center; padding: 10px 11px; background: #f8faf8; border: 1px solid var(--line); border-radius: 6px;
+    }
+    .group-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .group-item span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
     .question-list { display: grid; gap: 8px; }
     .question-item {
       display: grid; grid-template-columns: 1fr 42px; gap: 8px; align-items: center;
@@ -177,6 +211,9 @@
     }
     @media (max-width: 390px) {
       .mode-list { grid-template-columns: 1fr; }
+      .form-grid, .toggle-grid { grid-template-columns: 1fr; }
+      .filter-grid { grid-template-columns: 1fr 1fr; }
+      .filter-grid #statusFilter { grid-column: 1 / -1; }
       .question-title { font-size: 18px; }
       .panel { padding: 15px; }
     }
@@ -213,7 +250,33 @@
             <button class="mode" data-mode="sequence"><b>顺序刷题</b><span>按题库顺序逐题练习</span></button>
             <button class="mode" data-mode="random"><b>随机刷题</b><span>打乱顺序，减少位置记忆</span></button>
             <button class="mode" data-mode="wrong"><b>错题重刷</b><span>只练习标记为没记住的题</span></button>
+            <button class="mode" data-mode="comprehensive"><b>综合刷题</b><span>组合多套试题并自定义乱序</span></button>
           </div>
+        </div>
+
+        <div class="panel section" id="comprehensivePanel" hidden>
+          <h2>综合刷题设置</h2>
+          <div class="selection-tools">
+            <button class="mini-button" id="selectAllSets" type="button">全选</button>
+            <button class="mini-button" id="clearAllSets" type="button">清空</button>
+          </div>
+          <div class="set-selector" id="setSelector"></div>
+          <p class="hint" id="selectionSummary">尚未选择试题</p>
+          <div class="config-row">
+            <label for="questionLimit">本次题量</label>
+            <select id="questionLimit">
+              <option value="all">全部题目</option>
+              <option value="10">10 题</option>
+              <option value="20">20 题</option>
+              <option value="50">50 题</option>
+              <option value="100">100 题</option>
+            </select>
+          </div>
+          <div class="toggle-grid config-row">
+            <label class="toggle-line"><input id="shuffleQuestions" type="checkbox" checked>打乱题目顺序</label>
+            <label class="toggle-line"><input id="shuffleOptions" type="checkbox">打乱选项顺序</label>
+          </div>
+          <button class="primary wide config-row" id="startComprehensive" type="button">开始综合刷题</button>
         </div>
 
         <div class="panel section" id="homeEmpty">
@@ -240,6 +303,7 @@
         </div>
         <div id="quizContent">
           <article class="question-card">
+            <div class="question-context" id="questionContext"></div>
             <h2 class="question-title" id="questionTitle"></h2>
             <div class="options" id="options"></div>
             <div class="answer-box" id="answerBox">
@@ -263,6 +327,17 @@
 
         <div class="panel">
           <h2>批量导入</h2>
+          <div class="form-grid">
+            <div>
+              <label for="importCategory">所属大类</label>
+              <input id="importCategory" type="text" value="默认分类" placeholder="例如：计算机基础">
+            </div>
+            <div>
+              <label for="importSet">试题套卷</label>
+              <input id="importSet" type="text" value="未分组题库" placeholder="例如：2026 模拟卷一">
+            </div>
+          </div>
+          <div class="config-row"></div>
           <label for="importText">题目文本</label>
           <textarea id="importText" placeholder="在这里粘贴题目……"></textarea>
           <p class="hint">每题用空行分隔；支持 A. / A、开头的选项，以及“答案：”“解析：”。没有选项时也可作为简答题。</p>
@@ -285,6 +360,12 @@ HTTP 状态码 404 表示什么？
         </div>
 
         <div class="panel">
+          <h2>试题分组</h2>
+          <p class="hint">同一套试题可以整体改名或移动到其他大类。</p>
+          <div class="group-list" id="groupList"></div>
+        </div>
+
+        <div class="panel">
           <h2>备份与恢复</h2>
           <div class="button-row">
             <button class="secondary" id="exportData" type="button">导出备份</button>
@@ -300,8 +381,10 @@ HTTP 状态码 404 表示什么？
 
         <div class="section">
           <h2>全部题目 <span id="libraryCount"></span></h2>
-          <div class="search-row">
-            <input id="searchInput" type="search" placeholder="搜索题目或答案">
+          <div class="filter-grid">
+            <input class="search-field" id="searchInput" type="search" placeholder="搜索题目或答案">
+            <select id="categoryFilter" aria-label="按大类筛选"><option value="all">全部大类</option></select>
+            <select id="setFilter" aria-label="按套卷筛选"><option value="all">全部套卷</option></select>
             <select id="statusFilter" aria-label="按状态筛选">
               <option value="all">全部状态</option>
               <option value="mastered">已掌握</option>
@@ -330,14 +413,14 @@ HTTP 状态码 404 表示什么？
       const STORAGE_KEY = 'mobileQuestionBank.v1';
       const PUBLIC_BANK_URL = './questions.json';
       const SAMPLE = [
-        { question: '中国的首都是哪里？', options: ['上海', '北京', '广州', '深圳'], answer: 'B', explanation: '北京是中华人民共和国的首都。' },
-        { question: 'HTTP 状态码 404 表示什么？', options: [], answer: '请求的资源未找到', explanation: '404 Not Found 表示服务器找不到请求的资源。' },
-        { question: '下列哪些属于前端基础技术？（多选）', options: ['HTML', 'CSS', 'JavaScript', 'SQL'], answer: 'ABC', explanation: 'HTML、CSS 和 JavaScript 是常见的前端基础技术。' }
+        { category: '示例分类', set: '基础知识示例卷', question: '中国的首都是哪里？', options: ['上海', '北京', '广州', '深圳'], answer: 'B', explanation: '北京是中华人民共和国的首都。' },
+        { category: '示例分类', set: '网络知识示例卷', question: 'HTTP 状态码 404 表示什么？', options: [], answer: '请求的资源未找到', explanation: '404 Not Found 表示服务器找不到请求的资源。' },
+        { category: '示例分类', set: '网络知识示例卷', question: '下列哪些属于前端基础技术？（多选）', options: ['HTML', 'CSS', 'JavaScript', 'SQL'], answer: 'ABC', explanation: 'HTML、CSS 和 JavaScript 是常见的前端基础技术。' }
       ];
 
       let state = loadState();
       let currentView = 'home';
-      let session = { ids: [], index: 0, mode: 'sequence', selected: [], revealed: false };
+      let session = { ids: [], index: 0, mode: 'sequence', selected: [], revealed: false, shuffleOptions: false, optionOrders: {} };
       let toastTimer;
 
       const $ = id => document.getElementById(id);
@@ -347,17 +430,24 @@ HTTP 状态码 404 表示什么？
         progressText: $('progressText'), progressFill: $('progressFill'), homeEmpty: $('homeEmpty'),
         quickAnswer: $('quickAnswer'), quizCount: $('quizCount'), quizMode: $('quizMode'),
         quizProgress: $('quizProgress'), quizEmpty: $('quizEmpty'), quizEmptyText: $('quizEmptyText'),
-        quizContent: $('quizContent'), questionTitle: $('questionTitle'), options: $('options'),
+        quizContent: $('quizContent'), questionTitle: $('questionTitle'), questionContext: $('questionContext'), options: $('options'),
         answerBox: $('answerBox'), answerLine: $('answerLine'), explanation: $('explanation'),
         showAnswer: $('showAnswer'), resultActions: $('resultActions'), importText: $('importText'),
         questionList: $('questionList'), libraryCount: $('libraryCount'), searchInput: $('searchInput'),
-        statusFilter: $('statusFilter'), backupInput: $('backupInput'), notice: $('notice')
+        statusFilter: $('statusFilter'), categoryFilter: $('categoryFilter'), setFilter: $('setFilter'),
+        importCategory: $('importCategory'), importSet: $('importSet'), groupList: $('groupList'),
+        comprehensivePanel: $('comprehensivePanel'), setSelector: $('setSelector'),
+        backupInput: $('backupInput'), notice: $('notice')
       };
 
       function loadState() {
         try {
           const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-          if (parsed && Array.isArray(parsed.questions)) return parsed;
+          if (parsed && Array.isArray(parsed.questions)) {
+            parsed.questions = parsed.questions.map(normalizeQuestion);
+            parsed.progress = parsed.progress && typeof parsed.progress === 'object' ? parsed.progress : {};
+            return parsed;
+          }
         } catch (_) {}
         return { questions: [], progress: {} };
       }
@@ -410,6 +500,8 @@ HTTP 状态码 404 表示什么？
       function normalizeQuestion(item) {
         return {
           id: item.id || makeId(),
+          category: String(item.category || '默认分类').trim() || '默认分类',
+          set: String(item.set || item.paper || '未分组题库').trim() || '未分组题库',
           question: String(item.question || '').trim(),
           options: Array.isArray(item.options) ? item.options.map(String).map(s => s.trim()).filter(Boolean) : [],
           answer: String(item.answer || '').trim(),
@@ -438,6 +530,22 @@ HTTP 状态码 404 表示什么？
 
       function progressOf(id) { return state.progress[id] || 'new'; }
 
+      function groupKey(category, setName) {
+        return JSON.stringify([category, setName]);
+      }
+
+      function getGroups() {
+        const map = new Map();
+        state.questions.forEach(question => {
+          const key = groupKey(question.category, question.set);
+          if (!map.has(key)) map.set(key, { key, category: question.category, set: question.set, count: 0 });
+          map.get(key).count++;
+        });
+        return [...map.values()].sort((a, b) =>
+          a.category.localeCompare(b.category, 'zh-CN') || a.set.localeCompare(b.set, 'zh-CN')
+        );
+      }
+
       function renderHome() {
         const total = state.questions.length;
         const mastered = state.questions.filter(q => progressOf(q.id) === 'mastered').length;
@@ -449,7 +557,7 @@ HTTP 状态码 404 表示什么？
         els.progressText.textContent = percent + '%';
         els.progressFill.style.width = percent + '%';
         els.homeEmpty.hidden = total > 0;
-        $('homeSubtitle').textContent = total ? `题目保存在本机 · 还有 ${total - mastered} 题待掌握` : '数据只保存在当前浏览器中';
+        $('homeSubtitle').textContent = total ? `${getGroups().length} 套试题 · 还有 ${total - mastered} 题待掌握` : '数据只保存在当前浏览器中';
       }
 
       function shuffled(items) {
@@ -466,12 +574,96 @@ HTTP 状态码 404 表示什么？
         if (mode === 'wrong') questions = questions.filter(q => progressOf(q.id) === 'wrong');
         let ids = questions.map(q => q.id);
         if (mode === 'random' || mode === 'wrong') ids = shuffled(ids);
-        session = { ids, index: 0, mode, selected: [], revealed: false };
+        beginSession(ids, mode, false);
+      }
+
+      function beginSession(ids, mode, shuffleOptionOrder) {
+        session = {
+          ids, index: 0, mode, selected: [], revealed: false,
+          shuffleOptions: shuffleOptionOrder, optionOrders: {}
+        };
         setView('quiz');
+      }
+
+      function renderSetSelector(selectEverything) {
+        const groups = getGroups();
+        els.setSelector.innerHTML = '';
+        if (!groups.length) {
+          els.setSelector.textContent = '暂无可选择的试题套卷';
+          return;
+        }
+        const byCategory = new Map();
+        groups.forEach(group => {
+          if (!byCategory.has(group.category)) byCategory.set(group.category, []);
+          byCategory.get(group.category).push(group);
+        });
+        byCategory.forEach((categoryGroups, category) => {
+          const block = document.createElement('div'); block.className = 'category-group';
+          const title = document.createElement('div'); title.className = 'category-title'; title.textContent = category;
+          block.appendChild(title);
+          categoryGroups.forEach(group => {
+            const label = document.createElement('label'); label.className = 'set-choice';
+            const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = selectEverything; checkbox.dataset.groupKey = group.key;
+            const name = document.createElement('b'); name.textContent = group.set;
+            const count = document.createElement('span'); count.textContent = `${group.count} 题`;
+            label.append(checkbox, name, count); block.appendChild(label);
+          });
+          els.setSelector.appendChild(block);
+        });
+        updateSelectionSummary();
+      }
+
+      function updateSelectionSummary() {
+        const selected = [...els.setSelector.querySelectorAll('input:checked')];
+        const selectedKeys = new Set(selected.map(input => input.dataset.groupKey));
+        const questionCount = state.questions.filter(question => selectedKeys.has(groupKey(question.category, question.set))).length;
+        $('selectionSummary').textContent = `已选择 ${selected.length} 套，共 ${questionCount} 题`;
+      }
+
+      function openComprehensive() {
+        if (!state.questions.length) return toast('请先导入题目');
+        els.comprehensivePanel.hidden = false;
+        renderSetSelector(true);
+        setTimeout(() => els.comprehensivePanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+      }
+
+      function startComprehensive() {
+        const selectedGroups = new Set([...els.setSelector.querySelectorAll('input:checked')].map(input => input.dataset.groupKey));
+        if (!selectedGroups.size) return toast('请至少选择一套试题');
+        let ids = state.questions
+          .filter(question => selectedGroups.has(groupKey(question.category, question.set)))
+          .map(question => question.id);
+        if ($('shuffleQuestions').checked) ids = shuffled(ids);
+        const limitValue = $('questionLimit').value;
+        if (limitValue !== 'all') ids = ids.slice(0, Number(limitValue));
+        beginSession(ids, 'comprehensive', $('shuffleOptions').checked);
       }
 
       function currentQuestion() {
         return state.questions.find(q => q.id === session.ids[session.index]);
+      }
+
+      function getOptionOrder(question) {
+        if (!session.optionOrders[question.id]) {
+          const order = question.options.map((_, index) => index);
+          session.optionOrders[question.id] = session.shuffleOptions ? shuffled(order) : order;
+        }
+        return session.optionOrders[question.id];
+      }
+
+      function getOriginalAnswerKeys(question) {
+        const answer = question.answer.toUpperCase().trim();
+        if (!question.options.length || !/^[A-H\s,，、;；/]+$/.test(answer)) return [];
+        return [...new Set((answer.match(/[A-H]/g) || []))].filter(key => key.charCodeAt(0) - 65 < question.options.length);
+      }
+
+      function getDisplayedAnswer(question, order) {
+        const originalKeys = getOriginalAnswerKeys(question);
+        if (!originalKeys.length) return question.answer;
+        return originalKeys.map(key => {
+          const originalIndex = key.charCodeAt(0) - 65;
+          return String.fromCharCode(65 + order.indexOf(originalIndex));
+        }).sort().join('');
       }
 
       function renderQuestion() {
@@ -484,22 +676,26 @@ HTTP 状态码 404 表示什么？
             ? '目前没有待复习的错题。' : '先去题库导入题目。';
           return;
         }
-        const labels = { sequence: '顺序刷题', random: '随机刷题', wrong: '错题重刷' };
+        const labels = { sequence: '顺序刷题', random: '随机刷题', wrong: '错题重刷', comprehensive: '综合刷题' };
         els.quizCount.textContent = `第 ${session.index + 1} / ${session.ids.length} 题`;
         els.quizMode.textContent = labels[session.mode] || '刷题';
         els.quizProgress.style.width = ((session.index + 1) / session.ids.length * 100) + '%';
+        els.questionContext.textContent = `${q.category} · ${q.set}`;
         els.questionTitle.textContent = q.question;
         els.options.innerHTML = '';
-        q.options.forEach((option, index) => {
-          const key = String.fromCharCode(65 + index);
+        const optionOrder = getOptionOrder(q);
+        const displayedAnswer = getDisplayedAnswer(q, optionOrder);
+        const displayedAnswerKeys = getOriginalAnswerKeys(q).length ? displayedAnswer : '';
+        optionOrder.forEach((originalIndex, displayIndex) => {
+          const option = q.options[originalIndex];
+          const key = String.fromCharCode(65 + displayIndex);
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'option';
           button.dataset.key = key;
-          const normalizedAnswer = q.answer.toUpperCase().replace(/[^A-Z]/g, '');
           if (session.selected.includes(key)) button.classList.add('selected');
-          if (session.revealed && normalizedAnswer.includes(key)) button.classList.add('correct');
-          if (session.revealed && session.selected.includes(key) && !normalizedAnswer.includes(key)) button.classList.add('wrong');
+          if (session.revealed && displayedAnswerKeys.includes(key)) button.classList.add('correct');
+          if (session.revealed && session.selected.includes(key) && !displayedAnswerKeys.includes(key)) button.classList.add('wrong');
           const keySpan = document.createElement('span');
           keySpan.className = 'option-key'; keySpan.textContent = key;
           const textSpan = document.createElement('span');
@@ -508,7 +704,7 @@ HTTP 状态码 404 表示什么？
           button.addEventListener('click', () => toggleOption(key));
           els.options.appendChild(button);
         });
-        els.answerLine.textContent = '正确答案：' + q.answer;
+        els.answerLine.textContent = '正确答案：' + displayedAnswer + (session.shuffleOptions && q.options.length ? '（选项已打乱）' : '');
         els.explanation.textContent = q.explanation ? '解析：' + q.explanation : '暂无解析';
         els.answerBox.classList.toggle('show', session.revealed);
         els.showAnswer.hidden = session.revealed;
@@ -575,7 +771,9 @@ HTTP 状态码 404 表示什么？
       }
 
       function importText(replace) {
-        const questions = parseQuestions(els.importText.value);
+        const category = els.importCategory.value.trim() || '默认分类';
+        const setName = els.importSet.value.trim() || '未分组题库';
+        const questions = parseQuestions(els.importText.value).map(question => ({ ...question, category, set: setName }));
         if (!questions.length) {
           toast('未识别到题目，请检查格式');
           return;
@@ -589,13 +787,79 @@ HTTP 状态码 404 表示什么？
         toast(`已导入 ${questions.length} 道题`);
       }
 
+      function populateLibraryFilters() {
+        const selectedCategory = els.categoryFilter.value || 'all';
+        const selectedSet = els.setFilter.value || 'all';
+        const categories = [...new Set(state.questions.map(question => question.category))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+        els.categoryFilter.innerHTML = '';
+        const allCategories = document.createElement('option'); allCategories.value = 'all'; allCategories.textContent = '全部大类';
+        els.categoryFilter.appendChild(allCategories);
+        categories.forEach(category => {
+          const option = document.createElement('option'); option.value = category; option.textContent = category;
+          els.categoryFilter.appendChild(option);
+        });
+        els.categoryFilter.value = categories.includes(selectedCategory) ? selectedCategory : 'all';
+
+        const groups = getGroups().filter(group => els.categoryFilter.value === 'all' || group.category === els.categoryFilter.value);
+        els.setFilter.innerHTML = '';
+        const allSets = document.createElement('option'); allSets.value = 'all'; allSets.textContent = '全部套卷';
+        els.setFilter.appendChild(allSets);
+        groups.forEach(group => {
+          const option = document.createElement('option'); option.value = group.key;
+          option.textContent = els.categoryFilter.value === 'all' ? `${group.category} / ${group.set}` : group.set;
+          els.setFilter.appendChild(option);
+        });
+        els.setFilter.value = groups.some(group => group.key === selectedSet) ? selectedSet : 'all';
+      }
+
+      function renderGroupList() {
+        const groups = getGroups();
+        els.groupList.innerHTML = '';
+        if (!groups.length) {
+          els.groupList.textContent = '暂无试题分组';
+          return;
+        }
+        groups.forEach(group => {
+          const item = document.createElement('div'); item.className = 'group-item';
+          const body = document.createElement('div');
+          const name = document.createElement('b'); name.textContent = group.set;
+          const meta = document.createElement('span'); meta.textContent = `${group.category} · ${group.count} 题`;
+          body.append(name, meta);
+          const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'mini-button'; edit.textContent = '调整';
+          edit.addEventListener('click', () => editGroup(group));
+          item.append(body, edit); els.groupList.appendChild(item);
+        });
+      }
+
+      function editGroup(group) {
+        const category = prompt('将这套试题归入哪个大类？', group.category);
+        if (category === null) return;
+        const setName = prompt('试题套卷名称：', group.set);
+        if (setName === null) return;
+        const nextCategory = category.trim() || '默认分类';
+        const nextSet = setName.trim() || '未分组题库';
+        state.questions.forEach(question => {
+          if (groupKey(question.category, question.set) === group.key) {
+            question.category = nextCategory;
+            question.set = nextSet;
+          }
+        });
+        saveState(); renderLibrary(); toast('分组已更新');
+      }
+
       function renderLibrary() {
+        populateLibraryFilters();
+        renderGroupList();
         const keyword = els.searchInput.value.trim().toLowerCase();
         const filter = els.statusFilter.value;
+        const category = els.categoryFilter.value;
+        const selectedSet = els.setFilter.value;
         const visible = state.questions.filter(q => {
-          const matchesText = !keyword || (q.question + ' ' + q.answer + ' ' + q.explanation).toLowerCase().includes(keyword);
+          const matchesText = !keyword || (q.category + ' ' + q.set + ' ' + q.question + ' ' + q.answer + ' ' + q.explanation).toLowerCase().includes(keyword);
           const matchesStatus = filter === 'all' || progressOf(q.id) === filter;
-          return matchesText && matchesStatus;
+          const matchesCategory = category === 'all' || q.category === category;
+          const matchesSet = selectedSet === 'all' || groupKey(q.category, q.set) === selectedSet;
+          return matchesText && matchesStatus && matchesCategory && matchesSet;
         });
         els.libraryCount.textContent = `(${state.questions.length})`;
         els.questionList.innerHTML = '';
@@ -612,7 +876,7 @@ HTTP 状态码 404 表示什么？
           const item = document.createElement('div'); item.className = 'question-item';
           const body = document.createElement('div');
           const title = document.createElement('div'); title.className = 'question-item-title'; title.textContent = `${actualIndex + 1}. ${q.question}`;
-          const meta = document.createElement('div'); meta.className = 'question-item-meta'; meta.textContent = `${labels[progressOf(q.id)]} · 答案：${q.answer}`;
+          const meta = document.createElement('div'); meta.className = 'question-item-meta'; meta.textContent = `${q.category} / ${q.set} · ${labels[progressOf(q.id)]} · 答案：${q.answer}`;
           body.append(title, meta);
           const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-button'; del.textContent = '×'; del.title = '删除此题'; del.setAttribute('aria-label', '删除此题');
           del.addEventListener('click', () => deleteQuestion(q.id));
@@ -639,8 +903,8 @@ HTTP 状态码 404 表示什么？
       function exportPublicBank() {
         const payload = {
           version: Date.now(),
-          questions: state.questions.map(({ id, question, options, answer, explanation }) => ({
-            id, question, options, answer, explanation
+          questions: state.questions.map(({ id, category, set, question, options, answer, explanation }) => ({
+            id, category, set, question, options, answer, explanation
           }))
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -662,7 +926,12 @@ HTTP 状态码 404 表示什么？
             if (!data || !Array.isArray(data.questions)) throw new Error('bad format');
             const questions = data.questions.map(normalizeQuestion).filter(q => q.question && q.answer);
             if (!questions.length) throw new Error('empty');
-            state = { questions, progress: data.progress && typeof data.progress === 'object' ? data.progress : {} };
+            state = {
+              questions,
+              progress: data.progress && typeof data.progress === 'object' ? data.progress : {},
+              publicQuestionIds: Array.isArray(data.publicQuestionIds) ? data.publicQuestionIds : [],
+              publicBankVersion: data.publicBankVersion
+            };
             saveState(); renderLibrary(); toast(`已恢复 ${questions.length} 道题`);
           } catch (_) { toast('备份文件格式无效'); }
           els.backupInput.value = '';
@@ -674,7 +943,10 @@ HTTP 状态码 404 表示什么？
         if (button.dataset.view === 'quiz' && !session.ids.length && state.questions.length) startSession('sequence');
         else setView(button.dataset.view);
       }));
-      document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startSession(button.dataset.mode)));
+      document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.mode === 'comprehensive') openComprehensive();
+        else startSession(button.dataset.mode);
+      }));
       $('goImport').addEventListener('click', () => setView('library'));
       $('loadSample').addEventListener('click', () => {
         state.questions.push(...SAMPLE.map(normalizeQuestion)); saveState(); toast('已加载 3 道示例题');
@@ -688,6 +960,12 @@ HTTP 状态码 404 表示什么？
       $('replaceImport').addEventListener('click', () => importText(true));
       els.searchInput.addEventListener('input', renderLibrary);
       els.statusFilter.addEventListener('change', renderLibrary);
+      els.categoryFilter.addEventListener('change', () => { els.setFilter.value = 'all'; renderLibrary(); });
+      els.setFilter.addEventListener('change', renderLibrary);
+      els.setSelector.addEventListener('change', updateSelectionSummary);
+      $('selectAllSets').addEventListener('click', () => { els.setSelector.querySelectorAll('input').forEach(input => { input.checked = true; }); updateSelectionSummary(); });
+      $('clearAllSets').addEventListener('click', () => { els.setSelector.querySelectorAll('input').forEach(input => { input.checked = false; }); updateSelectionSummary(); });
+      $('startComprehensive').addEventListener('click', startComprehensive);
       $('exportData').addEventListener('click', exportBackup);
       $('exportPublicBank').addEventListener('click', exportPublicBank);
       $('chooseBackup').addEventListener('click', () => els.backupInput.click());
