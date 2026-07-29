@@ -285,6 +285,7 @@
             <p>先导入自己的题目，也可以加载示例试用。</p>
             <div class="button-row">
               <button class="primary" id="goImport" type="button">导入题目</button>
+              <button class="secondary" id="loadPublicBank" type="button">加载 questions.json</button>
               <button class="secondary" id="loadSample" type="button">加载示例</button>
             </div>
           </div>
@@ -370,9 +371,11 @@ HTTP 状态码 404 表示什么？
           <div class="button-row">
             <button class="secondary" id="exportData" type="button">导出备份</button>
             <button class="secondary" id="chooseBackup" type="button">导入备份</button>
+            <button class="secondary" id="choosePublicBank" type="button">加载 questions.json</button>
           </div>
           <button class="primary wide" id="exportPublicBank" type="button" style="margin-top:10px">导出公共题库</button>
           <input class="file-input" id="backupInput" type="file" accept="application/json,.json">
+          <input class="file-input" id="publicBankInput" type="file" accept="application/json,.json">
           <div class="button-row" style="margin-top:10px">
             <button class="secondary" id="resetProgress" type="button">重置进度</button>
             <button class="danger" id="clearAll" type="button">清空题库</button>
@@ -437,7 +440,7 @@ HTTP 状态码 404 表示什么？
         statusFilter: $('statusFilter'), categoryFilter: $('categoryFilter'), setFilter: $('setFilter'),
         importCategory: $('importCategory'), importSet: $('importSet'), groupList: $('groupList'),
         comprehensivePanel: $('comprehensivePanel'), setSelector: $('setSelector'),
-        backupInput: $('backupInput'), notice: $('notice')
+        backupInput: $('backupInput'), publicBankInput: $('publicBankInput'), notice: $('notice')
       };
 
       function loadState() {
@@ -461,35 +464,46 @@ HTTP 状态码 404 表示什么？
         return [item.question, ...(item.options || []), item.answer].join('|').replace(/\s+/g, '').toLowerCase();
       }
 
+      function applyPublicBank(data) {
+        const source = Array.isArray(data) ? data : data && data.questions;
+        if (!Array.isArray(source)) throw new Error('bad format');
+
+        const publicQuestions = source.map((item, index) => normalizeQuestion({
+          ...item,
+          id: item.id || `public-${index + 1}`
+        })).filter(item => item.question && item.answer);
+        if (!publicQuestions.length) throw new Error('empty');
+
+        const publicIds = new Set(publicQuestions.map(item => item.id));
+        const publicFingerprints = new Set(publicQuestions.map(questionFingerprint));
+        const previousPublicIds = new Set(state.publicQuestionIds || []);
+        const localQuestions = state.questions.filter(item =>
+          !previousPublicIds.has(item.id) &&
+          !publicIds.has(item.id) &&
+          !publicFingerprints.has(questionFingerprint(item))
+        );
+        const previousVersion = state.publicBankVersion;
+        state.questions = [...publicQuestions, ...localQuestions];
+        state.publicQuestionIds = [...publicIds];
+        state.publicBankVersion = (data && data.version) || 'unversioned';
+        saveState();
+        if (currentView === 'library') renderLibrary();
+        if (currentView === 'quiz') renderQuestion();
+        return { count: publicQuestions.length, updated: previousVersion && previousVersion !== state.publicBankVersion };
+      }
+
       async function syncPublicBank() {
         try {
           const response = await fetch(PUBLIC_BANK_URL, { cache: 'no-store' });
-          if (!response.ok) return;
-          const data = await response.json();
-          const source = Array.isArray(data) ? data : data.questions;
-          if (!Array.isArray(source)) return;
-
-          const publicQuestions = source.map((item, index) => normalizeQuestion({
-            ...item,
-            id: item.id || `public-${index + 1}`
-          })).filter(item => item.question && item.answer);
-          const publicIds = new Set(publicQuestions.map(item => item.id));
-          const publicFingerprints = new Set(publicQuestions.map(questionFingerprint));
-          const previousPublicIds = new Set(state.publicQuestionIds || []);
-          const localQuestions = state.questions.filter(item =>
-            !previousPublicIds.has(item.id) &&
-            !publicIds.has(item.id) &&
-            !publicFingerprints.has(questionFingerprint(item))
-          );
-          const previousVersion = state.publicBankVersion;
-          state.questions = [...publicQuestions, ...localQuestions];
-          state.publicQuestionIds = [...publicIds];
-          state.publicBankVersion = data.version || 'unversioned';
-          saveState();
-          if (previousVersion && previousVersion !== state.publicBankVersion) toast('公共题库已更新');
-          if (currentView === 'library') renderLibrary();
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = applyPublicBank(await response.json());
+          if (result.updated) toast(`公共题库已更新，共 ${result.count} 题`);
         } catch (_) {
-          // Opening the HTML directly has no web server, so the public bank is optional locally.
+          if (location.protocol === 'file:') {
+            toast('浏览器无法自动读取本地 JSON，请点击“加载 questions.json”');
+          } else {
+            toast('公共题库加载失败，请检查 questions.json 是否已发布');
+          }
         }
       }
 
@@ -939,6 +953,25 @@ HTTP 状态码 404 表示什么？
         reader.readAsText(file, 'utf-8');
       }
 
+      function importPublicBank(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const result = applyPublicBank(JSON.parse(reader.result));
+            toast(`公共题库已加载，共 ${result.count} 题`);
+          } catch (_) {
+            toast('questions.json 格式无效或没有有效题目');
+          }
+          els.publicBankInput.value = '';
+        };
+        reader.onerror = () => {
+          toast('questions.json 读取失败');
+          els.publicBankInput.value = '';
+        };
+        reader.readAsText(file, 'utf-8');
+      }
+
       document.querySelectorAll('.nav-button').forEach(button => button.addEventListener('click', () => {
         if (button.dataset.view === 'quiz' && !session.ids.length && state.questions.length) startSession('sequence');
         else setView(button.dataset.view);
@@ -948,6 +981,7 @@ HTTP 状态码 404 表示什么？
         else startSession(button.dataset.mode);
       }));
       $('goImport').addEventListener('click', () => setView('library'));
+      $('loadPublicBank').addEventListener('click', () => els.publicBankInput.click());
       $('loadSample').addEventListener('click', () => {
         state.questions.push(...SAMPLE.map(normalizeQuestion)); saveState(); toast('已加载 3 道示例题');
       });
@@ -970,6 +1004,8 @@ HTTP 状态码 404 表示什么？
       $('exportPublicBank').addEventListener('click', exportPublicBank);
       $('chooseBackup').addEventListener('click', () => els.backupInput.click());
       els.backupInput.addEventListener('change', event => importBackup(event.target.files[0]));
+      $('choosePublicBank').addEventListener('click', () => els.publicBankInput.click());
+      els.publicBankInput.addEventListener('change', event => importPublicBank(event.target.files[0]));
       $('resetProgress').addEventListener('click', () => {
         if (!state.questions.length) return toast('暂无进度');
         if (!confirm('确定重置全部学习进度吗？')) return;
@@ -990,6 +1026,13 @@ HTTP 状态码 404 表示什么？
       els.quickAnswer.style.visibility = 'hidden';
       renderHome();
       syncPublicBank();
+      if (location.protocol !== 'file:') {
+        window.addEventListener('focus', syncPublicBank);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') syncPublicBank();
+        });
+        setInterval(syncPublicBank, 30000);
+      }
     })();
   </script>
 </body>
