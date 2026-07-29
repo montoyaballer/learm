@@ -290,6 +290,7 @@ HTTP 状态码 404 表示什么？
             <button class="secondary" id="exportData" type="button">导出备份</button>
             <button class="secondary" id="chooseBackup" type="button">导入备份</button>
           </div>
+          <button class="primary wide" id="exportPublicBank" type="button" style="margin-top:10px">导出公共题库</button>
           <input class="file-input" id="backupInput" type="file" accept="application/json,.json">
           <div class="button-row" style="margin-top:10px">
             <button class="secondary" id="resetProgress" type="button">重置进度</button>
@@ -327,6 +328,7 @@ HTTP 状态码 404 表示什么？
       'use strict';
 
       const STORAGE_KEY = 'mobileQuestionBank.v1';
+      const PUBLIC_BANK_URL = './questions.json';
       const SAMPLE = [
         { question: '中国的首都是哪里？', options: ['上海', '北京', '广州', '深圳'], answer: 'B', explanation: '北京是中华人民共和国的首都。' },
         { question: 'HTTP 状态码 404 表示什么？', options: [], answer: '请求的资源未找到', explanation: '404 Not Found 表示服务器找不到请求的资源。' },
@@ -363,6 +365,42 @@ HTTP 状态码 404 表示什么？
       function saveState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         renderHome();
+      }
+
+      function questionFingerprint(item) {
+        return [item.question, ...(item.options || []), item.answer].join('|').replace(/\s+/g, '').toLowerCase();
+      }
+
+      async function syncPublicBank() {
+        try {
+          const response = await fetch(PUBLIC_BANK_URL, { cache: 'no-store' });
+          if (!response.ok) return;
+          const data = await response.json();
+          const source = Array.isArray(data) ? data : data.questions;
+          if (!Array.isArray(source)) return;
+
+          const publicQuestions = source.map((item, index) => normalizeQuestion({
+            ...item,
+            id: item.id || `public-${index + 1}`
+          })).filter(item => item.question && item.answer);
+          const publicIds = new Set(publicQuestions.map(item => item.id));
+          const publicFingerprints = new Set(publicQuestions.map(questionFingerprint));
+          const previousPublicIds = new Set(state.publicQuestionIds || []);
+          const localQuestions = state.questions.filter(item =>
+            !previousPublicIds.has(item.id) &&
+            !publicIds.has(item.id) &&
+            !publicFingerprints.has(questionFingerprint(item))
+          );
+          const previousVersion = state.publicBankVersion;
+          state.questions = [...publicQuestions, ...localQuestions];
+          state.publicQuestionIds = [...publicIds];
+          state.publicBankVersion = data.version || 'unversioned';
+          saveState();
+          if (previousVersion && previousVersion !== state.publicBankVersion) toast('公共题库已更新');
+          if (currentView === 'library') renderLibrary();
+        } catch (_) {
+          // Opening the HTML directly has no web server, so the public bank is optional locally.
+        }
       }
 
       function makeId() {
@@ -598,6 +636,23 @@ HTTP 状态码 404 表示什么？
         link.click(); URL.revokeObjectURL(url); toast('备份已导出');
       }
 
+      function exportPublicBank() {
+        const payload = {
+          version: Date.now(),
+          questions: state.questions.map(({ id, question, options, answer, explanation }) => ({
+            id, question, options, answer, explanation
+          }))
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'questions.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast('公共题库已导出');
+      }
+
       function importBackup(file) {
         if (!file) return;
         const reader = new FileReader();
@@ -634,6 +689,7 @@ HTTP 状态码 404 表示什么？
       els.searchInput.addEventListener('input', renderLibrary);
       els.statusFilter.addEventListener('change', renderLibrary);
       $('exportData').addEventListener('click', exportBackup);
+      $('exportPublicBank').addEventListener('click', exportPublicBank);
       $('chooseBackup').addEventListener('click', () => els.backupInput.click());
       els.backupInput.addEventListener('change', event => importBackup(event.target.files[0]));
       $('resetProgress').addEventListener('click', () => {
@@ -655,6 +711,7 @@ HTTP 状态码 404 表示什么？
 
       els.quickAnswer.style.visibility = 'hidden';
       renderHome();
+      syncPublicBank();
     })();
   </script>
 </body>

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "public-demo-1",
+      "question": "中国的首都是哪里？",
+      "options": ["上海", "北京", "广州", "深圳"],
+      "answer": "B",
+      "explanation": "北京是中华人民共和国的首都。"
+    },
+    {
+      "id": "public-demo-2",
+      "question": "HTTP 状态码 404 表示什么？",
+      "options": [],
+      "answer": "请求的资源未找到",
+      "explanation": "404 Not Found 表示服务器找不到请求的资源。"
+    },
+    {
+      "id": "public-demo-3",
+      "question": "下列哪些属于前端基础技术？（多选）",
+      "options": ["HTML", "CSS", "JavaScript", "SQL"],
+      "answer": "ABC",
+      "explanation": "HTML、CSS 和 JavaScript 是常见的前端基础技术。"
+    }
+  ]
+}
