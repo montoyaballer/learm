@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#166534">
+  <title>随身题库</title>
+  <style>
+    :root {
+      --green: #166534;
+      --green-2: #15803d;
+      --green-soft: #dcfce7;
+      --ink: #17211b;
+      --muted: #647067;
+      --line: #dce4de;
+      --paper: #ffffff;
+      --ground: #f4f7f4;
+      --red: #b42318;
+      --red-soft: #fee4e2;
+      --amber: #a15c07;
+      --amber-soft: #fff2cc;
+      --shadow: 0 8px 28px rgba(21, 52, 31, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--ground);
+      font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, textarea, select { font: inherit; letter-spacing: 0; }
+    button { touch-action: manipulation; }
+    .app { min-height: 100vh; padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 max(16px, env(safe-area-inset-left));
+      background: rgba(255,255,255,.96); border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 750; }
+    .brand-mark {
+      width: 30px; height: 30px; display: grid; place-items: center;
+      color: white; background: var(--green); border-radius: 7px; font-size: 16px;
+    }
+    .top-action {
+      min-width: 44px; height: 40px; border: 0; color: var(--green);
+      background: transparent; font-weight: 650; border-radius: 6px;
+    }
+    main { width: min(760px, 100%); margin: 0 auto; padding: 20px 16px 32px; }
+    .view { display: none; }
+    .view.active { display: block; animation: enter .18s ease-out; }
+    @keyframes enter { from { opacity: 0; transform: translateY(4px); } }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 7px; font-size: 26px; line-height: 1.25; }
+    h2 { margin-bottom: 14px; font-size: 19px; }
+    h3 { font-size: 16px; }
+    .sub { margin-bottom: 24px; color: var(--muted); font-size: 14px; }
+    .panel {
+      padding: 18px; background: var(--paper); border: 1px solid var(--line);
+      border-radius: 8px; box-shadow: var(--shadow);
+    }
+    .panel + .panel, .section + .section { margin-top: 16px; }
+    .section { margin-top: 26px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; padding: 0; }
+    .stat { min-width: 0; padding: 18px 8px; text-align: center; background: var(--paper); }
+    .stat strong { display: block; font-size: 26px; line-height: 1.1; }
+    .stat span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .progress-track { height: 8px; overflow: hidden; background: #e7ece8; border-radius: 4px; }
+    .progress-fill { height: 100%; width: 0; background: var(--green-2); border-radius: inherit; transition: width .25s; }
+    .progress-copy { display: flex; justify-content: space-between; margin: 10px 0 8px; color: var(--muted); font-size: 13px; }
+
+    .primary, .secondary, .danger, .choice-btn {
+      min-height: 48px; border-radius: 7px; border: 1px solid transparent;
+      padding: 0 16px; font-weight: 700; cursor: pointer;
+    }
+    .primary { color: #fff; background: var(--green); }
+    .primary:active { background: #14532d; }
+    .secondary { color: var(--ink); background: #fff; border-color: var(--line); }
+    .danger { color: var(--red); background: #fff; border-color: #f3b5b0; }
+    .wide { width: 100%; }
+    .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .button-row + .button-row { margin-top: 10px; }
+    button:disabled { opacity: .45; cursor: default; }
+
+    .mode-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode {
+      min-height: 92px; padding: 14px; text-align: left; color: var(--ink);
+      background: #fff; border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+    }
+    .mode b { display: block; margin-bottom: 5px; font-size: 16px; }
+    .mode span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    .quiz-head { margin-bottom: 14px; }
+    .quiz-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; color: var(--muted); font-size: 13px; }
+    .tag { padding: 3px 8px; color: var(--green); background: var(--green-soft); border-radius: 4px; }
+    .question-card { padding: 20px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+    .question-title { margin: 0 0 20px; font-size: 19px; line-height: 1.65; white-space: pre-wrap; }
+    .options { display: grid; gap: 10px; }
+    .option {
+      width: 100%; min-height: 52px; display: flex; align-items: flex-start; gap: 12px;
+      padding: 13px; text-align: left; line-height: 1.5; color: var(--ink);
+      background: white; border: 1px solid var(--line); border-radius: 7px; cursor: pointer;
+    }
+    .option-key {
+      flex: 0 0 27px; height: 27px; display: grid; place-items: center;
+      color: var(--muted); background: var(--ground); border-radius: 5px; font-size: 13px; font-weight: 750;
+    }
+    .option.selected { border-color: var(--green-2); background: #f5fbf7; }
+    .option.selected .option-key { color: white; background: var(--green-2); }
+    .option.correct { border-color: var(--green-2); background: var(--green-soft); }
+    .option.correct .option-key { color: white; background: var(--green-2); }
+    .option.wrong { border-color: var(--red); background: var(--red-soft); }
+    .option.wrong .option-key { color: white; background: var(--red); }
+    .answer-box { display: none; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .answer-box.show { display: block; }
+    .answer-line { margin-bottom: 10px; color: var(--green); font-size: 17px; font-weight: 750; }
+    .explanation { margin: 0; color: #405047; line-height: 1.65; white-space: pre-wrap; }
+    .quiz-actions { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); margin-top: 14px; padding: 10px; background: rgba(244,247,244,.96); }
+    .result-actions { display: none; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .result-actions.show { display: grid; }
+    .forgot { color: var(--red); background: white; border-color: #f1a9a3; }
+    .mastered { color: white; background: var(--green); }
+
+    .empty { padding: 38px 20px; text-align: center; color: var(--muted); }
+    .empty strong { display: block; margin-bottom: 7px; color: var(--ink); font-size: 18px; }
+    label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 700; }
+    input, textarea, select {
+      width: 100%; color: var(--ink); background: white; border: 1px solid #bdc9c0;
+      border-radius: 6px; outline: none;
+    }
+    input, select { height: 46px; padding: 0 12px; }
+    textarea { min-height: 240px; padding: 12px; line-height: 1.55; resize: vertical; }
+    input:focus, textarea:focus, select:focus { border-color: var(--green-2); box-shadow: 0 0 0 3px rgba(21,128,61,.12); }
+    .hint { margin: 8px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .search-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; margin-bottom: 14px; }
+    .question-list { display: grid; gap: 8px; }
+    .question-item {
+      display: grid; grid-template-columns: 1fr 42px; gap: 8px; align-items: center;
+      padding: 12px 10px 12px 14px; background: white; border: 1px solid var(--line); border-radius: 7px;
+    }
+    .question-item-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 650; }
+    .question-item-meta { margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .icon-button { width: 42px; height: 42px; border: 0; background: transparent; border-radius: 6px; color: var(--red); font-size: 21px; }
+    .format-example {
+      padding: 12px; overflow-x: auto; color: #405047; background: #eef3ef;
+      border-radius: 6px; font: 12px/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap;
+    }
+    .notice {
+      position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 50;
+      max-width: calc(100% - 32px); padding: 11px 16px; color: white; background: #26362b;
+      border-radius: 6px; box-shadow: var(--shadow); transform: translate(-50%, 20px); opacity: 0;
+      pointer-events: none; transition: .2s; white-space: nowrap;
+    }
+    .notice.show { transform: translate(-50%, 0); opacity: 1; }
+    .bottom-nav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      height: calc(64px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 1fr);
+      padding: 4px max(8px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(8px, env(safe-area-inset-left));
+      background: #fff; border-top: 1px solid var(--line);
+    }
+    .nav-button { border: 0; color: var(--muted); background: transparent; font-size: 12px; font-weight: 650; border-radius: 6px; }
+    .nav-button .nav-icon { display: block; margin-bottom: 2px; font-size: 21px; line-height: 24px; }
+    .nav-button.active { color: var(--green); background: #f2f8f3; }
+    .file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .footer-note { margin: 18px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
+
+    @media (min-width: 680px) {
+      main { padding-top: 30px; }
+      .mode-list { grid-template-columns: repeat(3, 1fr); }
+      .quiz-actions { position: static; padding: 10px 0 0; background: transparent; }
+    }
+    @media (max-width: 390px) {
+      .mode-list { grid-template-columns: 1fr; }
+      .question-title { font-size: 18px; }
+      .panel { padding: 15px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">✓</span><span>随身题库</span></div>
+      <button class="top-action" id="quickAnswer" type="button">看答案</button>
+    </header>
+
+    <main>
+      <section class="view active" id="homeView">
+        <h1 id="greeting">开始今天的刷题</h1>
+        <p class="sub" id="homeSubtitle">数据只保存在当前浏览器中</p>
+
+        <div class="panel stats">
+          <div class="stat"><strong id="totalStat">0</strong><span>全部题目</span></div>
+          <div class="stat"><strong id="masteredStat">0</strong><span>已掌握</span></div>
+          <div class="stat"><strong id="wrongStat">0</strong><span>待复习</span></div>
+        </div>
+
+        <div class="panel">
+          <h2>学习进度</h2>
+          <div class="progress-copy"><span>掌握率</span><span id="progressText">0%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="section">
+          <h2>选择模式</h2>
+          <div class="mode-list">
+            <button class="mode" data-mode="sequence"><b>顺序刷题</b><span>按题库顺序逐题练习</span></button>
+            <button class="mode" data-mode="random"><b>随机刷题</b><span>打乱顺序，减少位置记忆</span></button>
+            <button class="mode" data-mode="wrong"><b>错题重刷</b><span>只练习标记为没记住的题</span></button>
+          </div>
+        </div>
+
+        <div class="panel section" id="homeEmpty">
+          <div class="empty">
+            <strong>题库还是空的</strong>
+            <p>先导入自己的题目，也可以加载示例试用。</p>
+            <div class="button-row">
+              <button class="primary" id="goImport" type="button">导入题目</button>
+              <button class="secondary" id="loadSample" type="button">加载示例</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="quizView">
+        <div class="quiz-head">
+          <div class="quiz-meta"><span id="quizCount">第 1 / 1 题</span><span class="tag" id="quizMode">顺序刷题</span></div>
+          <div class="progress-track"><div class="progress-fill" id="quizProgress"></div></div>
+        </div>
+        <div id="quizEmpty" class="panel empty" hidden>
+          <strong>当前没有可练习的题目</strong>
+          <p id="quizEmptyText">先去题库导入题目。</p>
+          <button class="primary" id="quizGoLibrary" type="button">打开题库</button>
+        </div>
+        <div id="quizContent">
+          <article class="question-card">
+            <h2 class="question-title" id="questionTitle"></h2>
+            <div class="options" id="options"></div>
+            <div class="answer-box" id="answerBox">
+              <div class="answer-line" id="answerLine"></div>
+              <p class="explanation" id="explanation"></p>
+            </div>
+          </article>
+          <div class="quiz-actions">
+            <button class="primary wide" id="showAnswer" type="button">显示答案</button>
+            <div class="result-actions" id="resultActions">
+              <button class="choice-btn forgot" id="markWrong" type="button">没记住</button>
+              <button class="choice-btn mastered" id="markMastered" type="button">已掌握 / 下一题</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="libraryView">
+        <h1>题库管理</h1>
+        <p class="sub">批量粘贴、搜索、备份你的题目</p>
+
+        <div class="panel">
+          <h2>批量导入</h2>
+          <label for="importText">题目文本</label>
+          <textarea id="importText" placeholder="在这里粘贴题目……"></textarea>
+          <p class="hint">每题用空行分隔；支持 A. / A、开头的选项，以及“答案：”“解析：”。没有选项时也可作为简答题。</p>
+          <details>
+            <summary>查看格式示例</summary>
+            <pre class="format-example">中国的首都是哪里？
+A. 上海
+B. 北京
+C. 广州
+答案：B
+解析：北京是中华人民共和国的首都。
+
+HTTP 状态码 404 表示什么？
+答案：资源未找到</pre>
+          </details>
+          <div class="button-row" style="margin-top:14px">
+            <button class="primary" id="appendImport" type="button">追加导入</button>
+            <button class="secondary" id="replaceImport" type="button">替换题库</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>备份与恢复</h2>
+          <div class="button-row">
+            <button class="secondary" id="exportData" type="button">导出备份</button>
+            <button class="secondary" id="chooseBackup" type="button">导入备份</button>
+          </div>
+          <input class="file-input" id="backupInput" type="file" accept="application/json,.json">
+          <div class="button-row" style="margin-top:10px">
+            <button class="secondary" id="resetProgress" type="button">重置进度</button>
+            <button class="danger" id="clearAll" type="button">清空题库</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>全部题目 <span id="libraryCount"></span></h2>
+          <div class="search-row">
+            <input id="searchInput" type="search" placeholder="搜索题目或答案">
+            <select id="statusFilter" aria-label="按状态筛选">
+              <option value="all">全部状态</option>
+              <option value="mastered">已掌握</option>
+              <option value="wrong">待复习</option>
+              <option value="new">未练习</option>
+            </select>
+          </div>
+          <div class="question-list" id="questionList"></div>
+        </div>
+        <p class="footer-note">建议定期导出备份，避免清理浏览器数据后丢失。</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="nav-button active" data-view="home"><span class="nav-icon">⌂</span>首页</button>
+      <button class="nav-button" data-view="quiz"><span class="nav-icon">▣</span>刷题</button>
+      <button class="nav-button" data-view="library"><span class="nav-icon">☷</span>题库</button>
+    </nav>
+    <div class="notice" id="notice" role="status"></div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'mobileQuestionBank.v1';
+      const SAMPLE = [
+        { question: '中国的首都是哪里？', options: ['上海', '北京', '广州', '深圳'], answer: 'B', explanation: '北京是中华人民共和国的首都。' },
+        { question: 'HTTP 状态码 404 表示什么？', options: [], answer: '请求的资源未找到', explanation: '404 Not Found 表示服务器找不到请求的资源。' },
+        { question: '下列哪些属于前端基础技术？（多选）', options: ['HTML', 'CSS', 'JavaScript', 'SQL'], answer: 'ABC', explanation: 'HTML、CSS 和 JavaScript 是常见的前端基础技术。' }
+      ];
+
+      let state = loadState();
+      let currentView = 'home';
+      let session = { ids: [], index: 0, mode: 'sequence', selected: [], revealed: false };
+      let toastTimer;
+
+      const $ = id => document.getElementById(id);
+      const els = {
+        homeView: $('homeView'), quizView: $('quizView'), libraryView: $('libraryView'),
+        totalStat: $('totalStat'), masteredStat: $('masteredStat'), wrongStat: $('wrongStat'),
+        progressText: $('progressText'), progressFill: $('progressFill'), homeEmpty: $('homeEmpty'),
+        quickAnswer: $('quickAnswer'), quizCount: $('quizCount'), quizMode: $('quizMode'),
+        quizProgress: $('quizProgress'), quizEmpty: $('quizEmpty'), quizEmptyText: $('quizEmptyText'),
+        quizContent: $('quizContent'), questionTitle: $('questionTitle'), options: $('options'),
+        answerBox: $('answerBox'), answerLine: $('answerLine'), explanation: $('explanation'),
+        showAnswer: $('showAnswer'), resultActions: $('resultActions'), importText: $('importText'),
+        questionList: $('questionList'), libraryCount: $('libraryCount'), searchInput: $('searchInput'),
+        statusFilter: $('statusFilter'), backupInput: $('backupInput'), notice: $('notice')
+      };
+
+      function loadState() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (parsed && Array.isArray(parsed.questions)) return parsed;
+        } catch (_) {}
+        return { questions: [], progress: {} };
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        renderHome();
+      }
+
+      function makeId() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      }
+
+      function normalizeQuestion(item) {
+        return {
+          id: item.id || makeId(),
+          question: String(item.question || '').trim(),
+          options: Array.isArray(item.options) ? item.options.map(String).map(s => s.trim()).filter(Boolean) : [],
+          answer: String(item.answer || '').trim(),
+          explanation: String(item.explanation || '').trim()
+        };
+      }
+
+      function toast(message) {
+        clearTimeout(toastTimer);
+        els.notice.textContent = message;
+        els.notice.classList.add('show');
+        toastTimer = setTimeout(() => els.notice.classList.remove('show'), 1800);
+      }
+
+      function setView(view) {
+        currentView = view;
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-button').forEach(v => v.classList.toggle('active', v.dataset.view === view));
+        $(view + 'View').classList.add('active');
+        els.quickAnswer.style.visibility = view === 'quiz' ? 'visible' : 'hidden';
+        if (view === 'home') renderHome();
+        if (view === 'library') renderLibrary();
+        if (view === 'quiz') renderQuestion();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+
+      function progressOf(id) { return state.progress[id] || 'new'; }
+
+      function renderHome() {
+        const total = state.questions.length;
+        const mastered = state.questions.filter(q => progressOf(q.id) === 'mastered').length;
+        const wrong = state.questions.filter(q => progressOf(q.id) === 'wrong').length;
+        const percent = total ? Math.round(mastered / total * 100) : 0;
+        els.totalStat.textContent = total;
+        els.masteredStat.textContent = mastered;
+        els.wrongStat.textContent = wrong;
+        els.progressText.textContent = percent + '%';
+        els.progressFill.style.width = percent + '%';
+        els.homeEmpty.hidden = total > 0;
+        $('homeSubtitle').textContent = total ? `题目保存在本机 · 还有 ${total - mastered} 题待掌握` : '数据只保存在当前浏览器中';
+      }
+
+      function shuffled(items) {
+        const output = [...items];
+        for (let i = output.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [output[i], output[j]] = [output[j], output[i]];
+        }
+        return output;
+      }
+
+      function startSession(mode) {
+        let questions = state.questions;
+        if (mode === 'wrong') questions = questions.filter(q => progressOf(q.id) === 'wrong');
+        let ids = questions.map(q => q.id);
+        if (mode === 'random' || mode === 'wrong') ids = shuffled(ids);
+        session = { ids, index: 0, mode, selected: [], revealed: false };
+        setView('quiz');
+      }
+
+      function currentQuestion() {
+        return state.questions.find(q => q.id === session.ids[session.index]);
+      }
+
+      function renderQuestion() {
+        const q = currentQuestion();
+        const isEmpty = !q;
+        els.quizEmpty.hidden = !isEmpty;
+        els.quizContent.hidden = isEmpty;
+        if (isEmpty) {
+          els.quizEmptyText.textContent = session.mode === 'wrong' && state.questions.length
+            ? '目前没有待复习的错题。' : '先去题库导入题目。';
+          return;
+        }
+        const labels = { sequence: '顺序刷题', random: '随机刷题', wrong: '错题重刷' };
+        els.quizCount.textContent = `第 ${session.index + 1} / ${session.ids.length} 题`;
+        els.quizMode.textContent = labels[session.mode] || '刷题';
+        els.quizProgress.style.width = ((session.index + 1) / session.ids.length * 100) + '%';
+        els.questionTitle.textContent = q.question;
+        els.options.innerHTML = '';
+        q.options.forEach((option, index) => {
+          const key = String.fromCharCode(65 + index);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'option';
+          button.dataset.key = key;
+          const normalizedAnswer = q.answer.toUpperCase().replace(/[^A-Z]/g, '');
+          if (session.selected.includes(key)) button.classList.add('selected');
+          if (session.revealed && normalizedAnswer.includes(key)) button.classList.add('correct');
+          if (session.revealed && session.selected.includes(key) && !normalizedAnswer.includes(key)) button.classList.add('wrong');
+          const keySpan = document.createElement('span');
+          keySpan.className = 'option-key'; keySpan.textContent = key;
+          const textSpan = document.createElement('span');
+          textSpan.textContent = option;
+          button.append(keySpan, textSpan);
+          button.addEventListener('click', () => toggleOption(key));
+          els.options.appendChild(button);
+        });
+        els.answerLine.textContent = '正确答案：' + q.answer;
+        els.explanation.textContent = q.explanation ? '解析：' + q.explanation : '暂无解析';
+        els.answerBox.classList.toggle('show', session.revealed);
+        els.showAnswer.hidden = session.revealed;
+        els.resultActions.classList.toggle('show', session.revealed);
+      }
+
+      function toggleOption(key) {
+        if (session.revealed) return;
+        const index = session.selected.indexOf(key);
+        if (index >= 0) session.selected.splice(index, 1);
+        else session.selected.push(key);
+        renderQuestion();
+      }
+
+      function revealAnswer() {
+        if (!currentQuestion()) return;
+        session.revealed = true;
+        renderQuestion();
+      }
+
+      function markAndNext(status) {
+        const q = currentQuestion();
+        if (!q) return;
+        state.progress[q.id] = status;
+        saveState();
+        if (session.index < session.ids.length - 1) {
+          session.index++;
+          session.selected = [];
+          session.revealed = false;
+          renderQuestion();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          toast('本轮已完成');
+          setView('home');
+        }
+      }
+
+      function parseQuestions(text) {
+        const normalized = text.replace(/\r/g, '').trim();
+        if (!normalized) return [];
+        const blocks = normalized.split(/\n\s*\n+|\n\s*(?:={3,}|-{3,})\s*\n/).filter(Boolean);
+        const parsed = [];
+        blocks.forEach(block => {
+          const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
+          let question = '';
+          const options = [];
+          let answer = '';
+          let explanation = '';
+          let section = 'question';
+          for (const line of lines) {
+            const optionMatch = line.match(/^([A-H])[.、)）:]\s*(.+)$/i);
+            const answerMatch = line.match(/^(?:正确答案|参考答案|答案)\s*[:：]\s*(.*)$/i);
+            const explainMatch = line.match(/^(?:答案解析|解析|说明)\s*[:：]\s*(.*)$/i);
+            if (optionMatch) { options.push(optionMatch[2].trim()); section = 'options'; }
+            else if (answerMatch) { answer = answerMatch[1].trim(); section = 'answer'; }
+            else if (explainMatch) { explanation = explainMatch[1].trim(); section = 'explanation'; }
+            else if (section === 'explanation') explanation += (explanation ? '\n' : '') + line;
+            else if (section === 'answer') answer += (answer ? ' ' : '') + line;
+            else if (section === 'question') question += (question ? '\n' : '') + line.replace(/^(?:题目|问题)\s*[:：]\s*/, '');
+          }
+          if (question && answer) parsed.push(normalizeQuestion({ question, options, answer, explanation }));
+        });
+        return parsed;
+      }
+
+      function importText(replace) {
+        const questions = parseQuestions(els.importText.value);
+        if (!questions.length) {
+          toast('未识别到题目，请检查格式');
+          return;
+        }
+        if (replace && state.questions.length && !confirm(`确定用 ${questions.length} 道新题替换现有题库吗？`)) return;
+        if (replace) state = { questions, progress: {} };
+        else state.questions.push(...questions);
+        saveState();
+        els.importText.value = '';
+        renderLibrary();
+        toast(`已导入 ${questions.length} 道题`);
+      }
+
+      function renderLibrary() {
+        const keyword = els.searchInput.value.trim().toLowerCase();
+        const filter = els.statusFilter.value;
+        const visible = state.questions.filter(q => {
+          const matchesText = !keyword || (q.question + ' ' + q.answer + ' ' + q.explanation).toLowerCase().includes(keyword);
+          const matchesStatus = filter === 'all' || progressOf(q.id) === filter;
+          return matchesText && matchesStatus;
+        });
+        els.libraryCount.textContent = `(${state.questions.length})`;
+        els.questionList.innerHTML = '';
+        if (!visible.length) {
+          const empty = document.createElement('div');
+          empty.className = 'panel empty';
+          empty.textContent = state.questions.length ? '没有符合条件的题目' : '暂无题目';
+          els.questionList.appendChild(empty);
+          return;
+        }
+        const labels = { mastered: '已掌握', wrong: '待复习', new: '未练习' };
+        visible.forEach((q, visibleIndex) => {
+          const actualIndex = state.questions.indexOf(q);
+          const item = document.createElement('div'); item.className = 'question-item';
+          const body = document.createElement('div');
+          const title = document.createElement('div'); title.className = 'question-item-title'; title.textContent = `${actualIndex + 1}. ${q.question}`;
+          const meta = document.createElement('div'); meta.className = 'question-item-meta'; meta.textContent = `${labels[progressOf(q.id)]} · 答案：${q.answer}`;
+          body.append(title, meta);
+          const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-button'; del.textContent = '×'; del.title = '删除此题'; del.setAttribute('aria-label', '删除此题');
+          del.addEventListener('click', () => deleteQuestion(q.id));
+          item.append(body, del); els.questionList.appendChild(item);
+        });
+      }
+
+      function deleteQuestion(id) {
+        const q = state.questions.find(item => item.id === id);
+        if (!q || !confirm(`确定删除“${q.question.slice(0, 30)}”吗？`)) return;
+        state.questions = state.questions.filter(item => item.id !== id);
+        delete state.progress[id];
+        saveState(); renderLibrary(); toast('已删除');
+      }
+
+      function exportBackup() {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url; link.download = `随身题库备份-${new Date().toISOString().slice(0, 10)}.json`;
+        link.click(); URL.revokeObjectURL(url); toast('备份已导出');
+      }
+
+      function importBackup(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (!data || !Array.isArray(data.questions)) throw new Error('bad format');
+            const questions = data.questions.map(normalizeQuestion).filter(q => q.question && q.answer);
+            if (!questions.length) throw new Error('empty');
+            state = { questions, progress: data.progress && typeof data.progress === 'object' ? data.progress : {} };
+            saveState(); renderLibrary(); toast(`已恢复 ${questions.length} 道题`);
+          } catch (_) { toast('备份文件格式无效'); }
+          els.backupInput.value = '';
+        };
+        reader.readAsText(file, 'utf-8');
+      }
+
+      document.querySelectorAll('.nav-button').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.view === 'quiz' && !session.ids.length && state.questions.length) startSession('sequence');
+        else setView(button.dataset.view);
+      }));
+      document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startSession(button.dataset.mode)));
+      $('goImport').addEventListener('click', () => setView('library'));
+      $('loadSample').addEventListener('click', () => {
+        state.questions.push(...SAMPLE.map(normalizeQuestion)); saveState(); toast('已加载 3 道示例题');
+      });
+      $('quizGoLibrary').addEventListener('click', () => setView('library'));
+      els.showAnswer.addEventListener('click', revealAnswer);
+      els.quickAnswer.addEventListener('click', revealAnswer);
+      $('markWrong').addEventListener('click', () => markAndNext('wrong'));
+      $('markMastered').addEventListener('click', () => markAndNext('mastered'));
+      $('appendImport').addEventListener('click', () => importText(false));
+      $('replaceImport').addEventListener('click', () => importText(true));
+      els.searchInput.addEventListener('input', renderLibrary);
+      els.statusFilter.addEventListener('change', renderLibrary);
+      $('exportData').addEventListener('click', exportBackup);
+      $('chooseBackup').addEventListener('click', () => els.backupInput.click());
+      els.backupInput.addEventListener('change', event => importBackup(event.target.files[0]));
+      $('resetProgress').addEventListener('click', () => {
+        if (!state.questions.length) return toast('暂无进度');
+        if (!confirm('确定重置全部学习进度吗？')) return;
+        state.progress = {}; saveState(); renderLibrary(); toast('进度已重置');
+      });
+      $('clearAll').addEventListener('click', () => {
+        if (!state.questions.length) return toast('题库已经是空的');
+        if (!confirm('确定清空全部题目和学习进度吗？此操作不可撤销。')) return;
+        state = { questions: [], progress: {} }; saveState(); renderLibrary(); session.ids = []; toast('题库已清空');
+      });
+
+      document.addEventListener('keydown', event => {
+        if (currentView !== 'quiz') return;
+        if (/^[1-8]$/.test(event.key) && !session.revealed) toggleOption(String.fromCharCode(64 + Number(event.key)));
+        if (event.code === 'Space') { event.preventDefault(); session.revealed ? markAndNext('mastered') : revealAnswer(); }
+      });
+
+      els.quickAnswer.style.visibility = 'hidden';
+      renderHome();
+    })();
+  </script>
+</body>
+</html>
