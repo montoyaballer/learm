@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { networkInterfaces } from 'node:os';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const firstPort = 8765;
@@ -61,6 +62,19 @@ function openBrowser(url) {
   child.unref();
 }
 
+function getLanAddresses() {
+  const virtualAdapter = /vmware|virtual|vethernet|loopback|zerotier|docker|wsl/i;
+  const wirelessAdapter = /wi-?fi|wlan|无线|wireless/i;
+  return Object.entries(networkInterfaces())
+    .flatMap(([name, addresses]) => (addresses || [])
+      .filter(address => address.family === 'IPv4' && !address.internal)
+      .map(address => ({ name, address: address.address })))
+    .sort((left, right) => {
+      const score = item => (wirelessAdapter.test(item.name) ? 0 : virtualAdapter.test(item.name) ? 2 : 1);
+      return score(left) - score(right);
+    });
+}
+
 function listen(port) {
   server.once('error', error => {
     if (error.code === 'EADDRINUSE' && port < lastPort) {
@@ -70,12 +84,18 @@ function listen(port) {
     console.error(`启动失败：${error.message}`);
     process.exitCode = 1;
   });
-  server.listen(port, '127.0.0.1', () => {
-    const url = `http://127.0.0.1:${port}/`;
-    console.log(`随身题库已启动：${url}`);
+  server.listen(port, '0.0.0.0', () => {
+    const localUrl = `http://127.0.0.1:${port}/`;
+    console.log(`本机访问：${localUrl}`);
+    console.log('');
+    console.log('手机 Safari 访问（手机和电脑需连接同一 Wi-Fi）：');
+    for (const [index, item] of getLanAddresses().entries()) {
+      console.log(`  ${index === 0 ? '推荐' : item.name}: http://${item.address}:${port}/`);
+    }
+    console.log('');
     console.log('questions.json 会在每次刷新页面时自动同步。');
     console.log('关闭本窗口即可停止服务。');
-    if (process.env.QUESTION_BANK_NO_BROWSER !== '1') openBrowser(url);
+    if (process.env.QUESTION_BANK_NO_BROWSER !== '1') openBrowser(localUrl);
   });
 }
 

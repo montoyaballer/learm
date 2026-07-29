@@ -494,7 +494,9 @@ HTTP 状态码 404 表示什么？
 
       async function syncPublicBank() {
         try {
-          const response = await fetch(PUBLIC_BANK_URL, { cache: 'no-store' });
+          const publicBankUrl = new URL(PUBLIC_BANK_URL, location.href);
+          publicBankUrl.searchParams.set('_sync', Date.now());
+          const response = await fetch(publicBankUrl, { cache: 'no-store' });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const result = applyPublicBank(await response.json());
           if (result.updated) toast(`公共题库已更新，共 ${result.count} 题`);
